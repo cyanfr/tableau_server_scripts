@@ -52,8 +52,6 @@
 :: After you have made your changes, you can schedule it via Windows Server Task Scheduler.
 :: Be sure to schedule to run with elevated permissions to avoid problems.
 
-:: START EDITING HERE!
-
 ::setup date time key
 for /F "TOKENS=1* DELIMS= " %%A IN ('DATE/T') DO SET CDATE=%%B
 for /F "TOKENS=1,2 eol=/ DELIMS=/ " %%A IN ('DATE/T') DO SET mm=%%B
@@ -64,6 +62,8 @@ for /F "TOKENS=2 DELIMS=: " %%m in ('time /T') do set minutes=%%m
 set dt_key=%yyyy%%mm%%dd%
 set ts_key=%yyyy%%mm%%dd%-%hour%%minutes%
 set date_string=%mm%/%dd%/%yyyy%
+
+:: START EDITING HERE!
 
 :: THIS SETUP VAR SECTION IS THE ONLY PLACE YOU SHOULD NEED TO MAKE CHANGES.
 :: But you MUST check them all.  The ones below are either for examples or stubs.
