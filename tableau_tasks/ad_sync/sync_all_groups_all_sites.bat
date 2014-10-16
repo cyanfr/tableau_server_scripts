@@ -102,7 +102,7 @@ set script_lists_dir=%script_dir%\lists
 set defaultlst=%script_lists_dir%\default.lst
 set siteslst=%script_lists_dir%\sites.lst
 
-set log_dir=D:\tableau\tableau_tasks\ad_sync\logs
+set log_dir=C:\tableau\tableau_tasks\ad_sync\logs
 set log_file=ad_sync
 set log_ext=log
 set log=%log_dir%\%log_file%-%dt_key%-all.%log_ext%
