@@ -3,7 +3,7 @@
 :: ---------------------------------------------------------------------------------------
 :: The MIT License (MIT)
 :: 
-:: Copyright (c) 2014 cyanfr @ github
+:: Copyright (c) 2014 cyanfr@github
 :: 
 :: Permission is hereby granted, free of charge, to any person obtaining a copy
 :: of this software and associated documentation files (the "Software"), to deal
@@ -29,13 +29,13 @@
 :: export a multi-tab workbook to PDF format and to
 :: automatically email the result as an attachment.
 :: 
-:: It is written to echo all commands and output to a log file for debug.
+:: It is written to echo lots of info to a log file for debug.
 ::
 :: It also assumes you have created certain directories on your Tableau server
 :: where the actual bat files that you might want to run as scheduled Windows tasks.
-:: C:\Program Files\Tableau\Tableau Server\tableau_tasks
-:: C:\Program Files\Tableau\Tableau Server\tableau_tasks\logs
-:: C:\Program Files\Tableau\Tableau Server\tableau_exports
+:: C:\tableau\tableau_tasks\report_export
+:: C:\tableau\tableau_tasks\report_export\logs
+:: C:\tableau\tableau_tasks\report_export\exports
 ::
 :: It also assumes you have febooti command line email utility installed.
 :: See here for info: http://www.febooti.com/products/command-line-email/
@@ -51,8 +51,20 @@
 ::
 :: After you have made your changes, you can schedule it via Windows Server Task Scheduler.
 :: Be sure to schedule to run with elevated permissions to avoid problems.
+::
+:: Requirements
+:: febooti command line email installed on Tableau Server
+:: The ability to schedule and run scripts on the Tableau Server at elevated authority.
+::
+:: Usage
+:: Edit the values of the variables in the section below titles "START EDITING HERE" to reflect your Tableau Server environment.
+:: Use Control Panel > Administrative Tools > Task Scheduler to set up regular times to run this script or run it as administrator at any time.
+:: Batch file must be run as administrator.
+::
+:: NOTE!
+:: This script could be easily altered to allow for feeding in site, report name, etc. at the command line during runtime.
 
-::setup date time key
+::set up useful date time keys
 for /F "TOKENS=1* DELIMS= " %%A IN ('DATE/T') DO SET CDATE=%%B
 for /F "TOKENS=1,2 eol=/ DELIMS=/ " %%A IN ('DATE/T') DO SET mm=%%B
 for /F "TOKENS=1,2 DELIMS=/ eol=/" %%A IN ('echo %CDATE%') DO SET dd=%%B
@@ -63,45 +75,46 @@ set dt_key=%yyyy%%mm%%dd%
 set ts_key=%yyyy%%mm%%dd%-%hour%%minutes%
 set date_string=%mm%/%dd%/%yyyy%
 
-:: START EDITING HERE!
+:: set day of week number
+for /f %%a in ('wmic path win32_localtime get dayofweek /format:list ^| findstr "="') do (set %%a)
+set dow_num=%dayofweek%
 
+::----------------------------------------
+:: START EDITING HERE
+::----------------------------------------
 :: THIS SETUP VAR SECTION IS THE ONLY PLACE YOU SHOULD NEED TO MAKE CHANGES.
 :: But you MUST check them all.  The ones below are either for examples or stubs.
 :: SETUP VARS
 :: This set variable section is the only place you should need to make changes to export and email PDFs.
-:: Note I install Tableau Server not to Program Files/Tableau Server but to a path with no spaces in the name.
-:: There are a variety of odd-ball situations that can cocur that are caused by having spaces in the path.
 set tableau_drive=C:
 set tableau_root=C:\tableau\tableauserver
 set tableau_bin_dir="%tableau_root%\8.2\bin"
 set script_drive=C:
 set script_root=C:
-set script_dir=%script_root%\tableau_tasks
-set usr=<Put your username here. Remove the brackets of course.>
-set pwd="<Put your password here.  Keep the double quotes!>"
-set svr="https://your.tableau.host"
+set script_dir=%script_root%\tableau\tableau_tasks\report_export
+set bin_loc="C:\tableau\tableauserver\8.2\bin"
+set usr=<Tableau user that runs tableau server>
+set pwd="<password>"
+set svr="http://localhost"
 :: or possibly set svr="http://your.tableau.host"
 :: or maybe with ssl.  So set svr="https://your.tableau.host"
-::
 :: If workbook is in default site,
 :: site variable should be left empty
 :: Otherwise set like this...
 :: set site=-t <site name>
-:: So for default.
+:: e.g. set site=-t Sales
 set site=
-:: For another site such as Sales
-:: set site=-t Sales
 set log_dir=%script_dir%\logs
 set log_file=report_log
 set log_ext=log
 set log="%log_dir%\%log_file%-%dt_key%.%log_ext%"
-set report_admin=some.email.addr.you.choose@yourcompany.com
+set report_admin=your.email@yourcompany.com
 :: report_loc is the workbook in Tableau.
 :: Format is <Workbook-Name>/<Name-of-First-Tab>.
 :: You can figure this out by just navigating to the workbook
 :: in a browser and checking the path.
-set report_loc="Workbook/FirstTab"
-set export_dir=%script_root%\tableau_exports
+set report_loc="DashboardName/TabName"
+set export_dir=%script_dir%\exports
 set report=report_name_%dt_key%.pdf
 :: Formatting options for export vars.
 :: Format choices are --csv, --pdf, --png, --fullpdf.
@@ -113,17 +126,18 @@ set pagesize=--pagesize letter
 :: Email related vars.
 set attachment="%export_dir%\%report%"
 set smtp_server=smtp.yourcompany.com
-set from_email=some.email.addr@yourcompany.com
+set from_email=biservices@yourcompany.com
 :: At least one of to_email, cc_email, bcc_email is required.
 :: But any of them can just be left empty.
-::set to_email=
-set to_email=-TO "some-email-address@company-aye.com; some-other-mail-address@company-bee.com"
+set to_email=-TO "%report_admin%"
+::set to_email=-TO "some-email-address@company-aye.com; some-other-mail-address@company-bee.com"
 set cc_email=
 set bcc_email=-BCC "%report_admin%"
-set email_subject=-SUBJECT "Your report for %date_string%."
-set email_body=-BODY "Please find attached your report for %date_string%.  Please direct question to %from_email%."
-
-:: STOP EDITING HERE!
+set email_subject=-SUBJECT "Some subject line here.  Mention the %date_string%."
+set email_body=-BODY "Please find attached the report you asked for covering %date_string%.  Please direct question to %report_admin%."
+::----------------------------------------
+:: STOP EDITING HERE
+::----------------------------------------
 
 echo ---------------------------------------------- > %log%
 echo ---------- variables ------------------------- >> %log%
@@ -196,7 +210,7 @@ echo. >> %log%
 echo. >> %log%
 
 echo ------------------------------------------------ >> %log%
-echo ---------- logging in to Default site ---------- >> %log%
+echo ---------- logging out of Default site ---------- >> %log%
 echo ------------------------------------------------ >> %log%
 echo tabcmd logout >> %log%
 tabcmd logout >> %log%
