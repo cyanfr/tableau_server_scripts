@@ -47,6 +47,8 @@
 :: Sufficient local drive space for 7 days of backups.
 :: Access to an off-box network drive for a second copy of the backup files.
 :: Space on the network drive for 7 days of backups.
+:: An Amazon AWS S3 account.
+:: The AWS CLI installed on the server:  https://aws.amazon.com/cli/
 :: The ability to schedule and run scripts on the Tableau Server at elevated authority.
 ::
 :: Usage
@@ -91,6 +93,12 @@ set log=%log_dir%\%file_name%.%log_ext%
 set backup_name=%file_name%.tsbak
 set from_dir=%bin_dir%
 set to_dir=<absolute path to an accessible network drive directory off box>
+
+:: AWS SETUP
+set AWS_ACCESS_KEY_ID=_YOUR_AWS_ACCESS_KEY_HERE_
+set AWS_SECRET_ACCESS_KEY=_YOUR_AWS_SECRET_KEY_HERE_
+set aws_bin=C:\Program Files\Amazon\AWSCLI
+set s3_dir=s3://<your s3 bucket name>/<a folder inside your s3 bucket>/
 ::----------------------------------------
 :: STOP EDITING HERE
 ::----------------------------------------
@@ -117,6 +125,9 @@ echo log = %log% >> %log%
 echo backup_name = %backup_name% >> %log%
 echo from_dir = %from_dir% >> %log%
 echo to_dir = %to_dir% >> %log%
+
+echo aws_bin = %aws_bin% >> %log%
+echo s3_dir = %s3_dir% >> %log%
 echo. >> %log%
 
 ::change drives
@@ -136,9 +147,16 @@ tabadmin backup %file_name%
 echo ******Backup FINISHING %date%:%time%****** >> %log%
 echo. >> %log%
 
-echo ******Copying backup %date%:%time%****** >> %log%
+echo ******Copying backup to network drive %date%:%time%****** >> %log%
 echo copy /Y %backup_name% %to_dir% >> %log%
 copy /y %backup_name% %to_dir%
+echo ******Copying backup to AWS S3 %date%:%time%****** >> %log%
+echo cd %aws_bin% >> %log%
+cd %aws_bin%
+echo aws s3 cp %bin_dir%\%backup_name% %s3_dir% >> %log%
+aws s3 cp %bin_dir%\%backup_name% %s3_dir%
+echo cd %bin_dir% >> %log%
+cd %bin_dir%
 echo ******Backup copied %date%:%time%****** >> %log%
 echo. >> %log%
 
